@@ -1,0 +1,106 @@
+<pre><code class="r setup, include=FALSE">knitr::opts_chunk$set(echo = TRUE)
+</code></pre>
+
+<p>##<strong>Summary</strong></p>
+
+<p>The aim of this work is to build the best predictive model that predict the manner in which the authors did the exercise of producing the classes in their paper.
+For that end, we build two models using the random forest method and the regression partition tree. We evaluated the accuracy of each method on a subsetted training and test set. The random forest method appeared to be the best.</p>
+
+<p>##<strong>The model selection</strong>
+The libraries needed</p>
+
+<pre><code class="r, include = FALSE, echo = FALSE">library(caret) 
+library(kernlab) 
+library(rattle)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+</code></pre>
+
+<p>We set the seed</p>
+
+<pre><code class="r">set.seed(1234)
+</code></pre>
+
+<p>We load the two datasets.</p>
+
+<pre><code class="r">download.file(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;,&quot;pml.testing.csv&quot;)
+download.file(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;,&quot;pml.training.csv&quot;)
+</code></pre>
+
+<pre><code class="r">training &lt;- read.csv(&quot;pml.training.csv&quot;, na.strings = c(&quot;NA&quot;,&quot;#DIV/0!&quot;,&quot;&quot;))
+testing &lt;- read.csv(&quot;pml.testing.csv&quot;, na.strings=c(&quot;NA&quot;,&quot;#DIV/0!&quot;,&quot;&quot;))
+</code></pre>
+
+<p>We delete the rows with NA</p>
+
+<pre><code class="r">training &lt;- training[,colSums(is.na(training))==0]
+testing &lt;- testing[,colSums(is.na(testing))==0]
+</code></pre>
+
+<p>We delete columns we don&#39;t need for our analysis</p>
+
+<pre><code class="r">training2 &lt;- training[,-c(1:7)]
+</code></pre>
+
+<pre><code class="r">testing2 &lt;- testing[,-c(1:7)]
+</code></pre>
+
+<p>We partion the training set in two subsets that will be used to select the the best method to use for the prediction on the original testing set.</p>
+
+<pre><code class="r">inTrain &lt;- createDataPartition(training2$classe,p=3/4, list = FALSE)
+training3 &lt;- training2[inTrain,]
+testing3 &lt;- training2[-inTrain,]
+</code></pre>
+
+<pre><code class="r"> dim(training3)
+</code></pre>
+
+<pre><code class="r"> dim(testing3)
+</code></pre>
+
+<p>We start by fitting with the regression partition tree.</p>
+
+<pre><code class="r">fit.rpart &lt;- rpart(classe~.,data = training3,method = &quot;class&quot;) 
+mod.rpart &lt;- predict(fit.rpart, newdata = testing3,type = &quot;class&quot;)
+</code></pre>
+
+<p>We can plot the tree below.</p>
+
+<pre><code class="r">rpart.plot(fit.rpart, main=&quot;Classification Tree&quot;, extra=102, under=TRUE, faclen=0)
+</code></pre>
+
+<p>We use the confusion matrix for accuracy.</p>
+
+<pre><code class="r">confusionMatrix(mod.rpart, testing3$classe)
+</code></pre>
+
+<p>The second fit is with the random forest method.</p>
+
+<pre><code class="r">fit.rf &lt;- randomForest(classe~.,data = training3,method = &quot;class&quot;) 
+mod.rf &lt;- predict(fit.rf, newdata = testing3,type = &quot;class&quot;)
+</code></pre>
+
+<p>We use the confusion matrix for accuracy.</p>
+
+<pre><code class="r">confusionMatrix(mod.rf, testing3$classe)
+</code></pre>
+
+<p>Predict outcome levels on the original test data set using Random Forest algorithm, the best of the two algorithms tested.</p>
+
+<pre><code class="r">modFin &lt;- predict(fit.rf, newdata = testing2, type=&quot;class&quot;)
+</code></pre>
+
+<p>Write files for submission</p>
+
+<pre><code class="r">writeInFiles &lt;- function(x){
+        n = length(x)
+        for(i in 1:n){
+                filename = paste0(&quot;problem_id_&quot;,i,&quot;.txt&quot;)
+                write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+        }
+}
+
+writeInFiles(modFin)
+</code></pre>
+
