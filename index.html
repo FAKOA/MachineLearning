@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Machinelearning by FAKOA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Machinelearning</h1>
+      <h2 class="project-tagline"></h2>
+      <a href="https://github.com/FAKOA/MachineLearning" class="btn">View on GitHub</a>
+      <a href="https://github.com/FAKOA/MachineLearning/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/FAKOA/MachineLearning/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="practical-machine-learning-course-project" class="anchor" href="#practical-machine-learning-course-project" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><strong>Practical Machine Learning Course Project</strong>
+</h1>
+
+<h2>
+<a id="summary" class="anchor" href="#summary" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><strong>Summary</strong>
+</h2>
+
+<p>The aim of this work is to build the best predictive model that predict the manner in which the authors did the exercise of producing the classes in their paper.
+For that end, we build two models using the random forest method and the regression partition tree. We evaluated the accuracy of each method on a subsetted training and test set. The random forest method appeared to be the best.</p>
+
+<h2>
+<a id="the-model-selection" class="anchor" href="#the-model-selection" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><strong>The model selection</strong>
+</h2>
+
+<p>The libraries needed</p>
+
+<div class="highlight highlight-source-r"><pre>library(<span class="pl-smi">markdown</span>)
+library(<span class="pl-smi">knitr</span>)
+library(<span class="pl-smi">caret</span>) 
+library(<span class="pl-smi">kernlab</span>) 
+library(<span class="pl-smi">rattle</span>)
+library(<span class="pl-smi">rpart</span>)
+library(<span class="pl-smi">rpart.plot</span>)
+library(<span class="pl-smi">randomForest</span>)</pre></div>
+
+<p>We set the seed</p>
+
+<div class="highlight highlight-source-r"><pre>set.seed(<span class="pl-c1">1234</span>)</pre></div>
+
+<p>We download the two datasets.</p>
+
+<div class="highlight highlight-source-r"><pre>download.file(<span class="pl-s"><span class="pl-pds">"</span>https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>pml.testing.csv<span class="pl-pds">"</span></span>)
+download.file(<span class="pl-s"><span class="pl-pds">"</span>https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>pml.training.csv<span class="pl-pds">"</span></span>)</pre></div>
+
+<p>We load the two datasets.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">training</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-s"><span class="pl-pds">"</span>pml.training.csv<span class="pl-pds">"</span></span>, <span class="pl-v">na.strings</span> <span class="pl-k">=</span> c(<span class="pl-s"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>#DIV/0!<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>))
+<span class="pl-smi">testing</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-s"><span class="pl-pds">"</span>pml.testing.csv<span class="pl-pds">"</span></span>, <span class="pl-v">na.strings</span><span class="pl-k">=</span>c(<span class="pl-s"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>#DIV/0!<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>))</pre></div>
+
+<p>We delete the rows with NA</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">training</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">training</span>[,colSums(is.na(<span class="pl-smi">training</span>))<span class="pl-k">==</span><span class="pl-c1">0</span>]
+<span class="pl-smi">testing</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">testing</span>[,colSums(is.na(<span class="pl-smi">testing</span>))<span class="pl-k">==</span><span class="pl-c1">0</span>]</pre></div>
+
+<p>We delete columns we don't need for our analysis</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">training2</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">training</span>[,<span class="pl-k">-</span>c(<span class="pl-c1">1</span><span class="pl-k">:</span><span class="pl-c1">7</span>)]</pre></div>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">testing2</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">testing</span>[,<span class="pl-k">-</span>c(<span class="pl-c1">1</span><span class="pl-k">:</span><span class="pl-c1">7</span>)]</pre></div>
+
+<p>We partion the training set in two subsets that will be used to select the the best method to use for the prediction on the original testing set.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">inTrain</span> <span class="pl-k">&lt;-</span> createDataPartition(<span class="pl-smi">training2</span><span class="pl-k">$</span><span class="pl-smi">classe</span>,<span class="pl-v">p</span><span class="pl-k">=</span><span class="pl-c1">3</span><span class="pl-k">/</span><span class="pl-c1">4</span>, <span class="pl-v">list</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)
+<span class="pl-smi">training3</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">training2</span>[<span class="pl-smi">inTrain</span>,]
+<span class="pl-smi">testing3</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">training2</span>[<span class="pl-k">-</span><span class="pl-smi">inTrain</span>,]</pre></div>
+
+<div class="highlight highlight-source-r"><pre> dim(<span class="pl-smi">training3</span>)</pre></div>
+
+<div class="highlight highlight-source-r"><pre> dim(<span class="pl-smi">testing3</span>)</pre></div>
+
+<p>We start by fitting with the regression partition tree.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">fit.rpart</span> <span class="pl-k">&lt;-</span> rpart(<span class="pl-smi">classe</span><span class="pl-k">~</span>.,<span class="pl-v">data</span> <span class="pl-k">=</span> <span class="pl-smi">training3</span>,<span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>) 
+<span class="pl-smi">mod.rpart</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">fit.rpart</span>, <span class="pl-v">newdata</span> <span class="pl-k">=</span> <span class="pl-smi">testing3</span>,<span class="pl-v">type</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>)</pre></div>
+
+<p>We can plot the tree below.</p>
+
+<div class="highlight highlight-source-r"><pre>rpart.plot(<span class="pl-smi">fit.rpart</span>, <span class="pl-v">main</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>Classification Tree<span class="pl-pds">"</span></span>, <span class="pl-v">extra</span><span class="pl-k">=</span><span class="pl-c1">102</span>, <span class="pl-v">under</span><span class="pl-k">=</span><span class="pl-c1">TRUE</span>, <span class="pl-v">faclen</span><span class="pl-k">=</span><span class="pl-c1">0</span>)</pre></div>
+
+<p>We use the confusion matrix for accuracy.</p>
+
+<div class="highlight highlight-source-r"><pre>confusionMatrix(<span class="pl-smi">mod.rpart</span>, <span class="pl-smi">testing3</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<p>The second fit is with the random forest method.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">fit.rf</span> <span class="pl-k">&lt;-</span> randomForest(<span class="pl-smi">classe</span><span class="pl-k">~</span>.,<span class="pl-v">data</span> <span class="pl-k">=</span> <span class="pl-smi">training3</span>,<span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>) 
+<span class="pl-smi">mod.rf</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">fit.rf</span>, <span class="pl-v">newdata</span> <span class="pl-k">=</span> <span class="pl-smi">testing3</span>,<span class="pl-v">type</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>)</pre></div>
+
+<p>We use the confusion matrix for accuracy.</p>
+
+<div class="highlight highlight-source-r"><pre>confusionMatrix(<span class="pl-smi">mod.rf</span>, <span class="pl-smi">testing3</span><span class="pl-k">$</span><span class="pl-smi">classe</span>)</pre></div>
+
+<p>Predict outcome levels on the original test data set using Random Forest algorithm, the best of the two algorithms tested.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">modFin</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">fit.rf</span>, <span class="pl-v">newdata</span> <span class="pl-k">=</span> <span class="pl-smi">testing2</span>, <span class="pl-v">type</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>class<span class="pl-pds">"</span></span>)</pre></div>
+
+<p>Write files for submission</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-en">writeInFiles</span> <span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>){
+        <span class="pl-v">n</span> <span class="pl-k">=</span> length(<span class="pl-smi">x</span>)
+        <span class="pl-k">for</span>(<span class="pl-smi">i</span> <span class="pl-k">in</span> <span class="pl-c1">1</span><span class="pl-k">:</span><span class="pl-smi">n</span>){
+                <span class="pl-v">filename</span> <span class="pl-k">=</span> paste0(<span class="pl-s"><span class="pl-pds">"</span>problem_id_<span class="pl-pds">"</span></span>,<span class="pl-smi">i</span>,<span class="pl-s"><span class="pl-pds">"</span>.txt<span class="pl-pds">"</span></span>)
+                write.table(<span class="pl-smi">x</span>[<span class="pl-smi">i</span>],<span class="pl-v">file</span><span class="pl-k">=</span><span class="pl-smi">filename</span>,<span class="pl-v">quote</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>,<span class="pl-v">row.names</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>,<span class="pl-v">col.names</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>)
+        }
+}
+
+writeInFiles(<span class="pl-smi">modFin</span>)</pre></div>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/FAKOA/MachineLearning">Machinelearning</a> is maintained by <a href="https://github.com/FAKOA">FAKOA</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
